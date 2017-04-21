@@ -435,7 +435,7 @@ int waddch( WINDOW *win, const chtype ch)
             if (!SP->raw_out)
                 x = 0;
 
-            wclrtoeol(win);
+            // wclrtoeol(win);
 
             if (++y > win->_bmarg)
             {
@@ -447,14 +447,8 @@ int waddch( WINDOW *win, const chtype ch)
 
             break;
 
-        case '\b':
-            /* don't back over left margin */
-
-            if (--x < 0)
-        case '\r':
-                x = 0;
-
-            break;
+        case '\b': if (--x < 0) x = 0; break;
+        case '\r': x = 0; break;
 
         case 0x7f:
             if (waddch(win, attr | '^') == ERR)
