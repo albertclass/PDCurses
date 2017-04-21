@@ -17,6 +17,14 @@ O = obj
 PDCURSES_SRCDIR = ..
 !endif
 
+!ifdef DEBUG
+OUTDIR 	= Debug
+!else
+OUTDIR 	= Release
+!endif
+
+OBJDIR	= Obj\$(OUTDIR)
+
 !include $(PDCURSES_SRCDIR)\version.mif
 !include $(PDCURSES_SRCDIR)\libobjs.mif
 
@@ -33,10 +41,10 @@ LINK    = link.exe -nologo
 !endif
 
 !ifdef DEBUG
-CFLAGS      = -Z7 -DPDCDEBUG -MT -D_CRT_SECURE_NO_WARNINGS
+CFLAGS       = -Zi -DPDCDEBUG -MDd -D_CRT_SECURE_NO_WARNINGS
 LDFLAGS      = -debug -pdb:none
 !else
-CFLAGS      = -Ox -MT -W3 -D_CRT_SECURE_NO_WARNINGS
+CFLAGS       = -Ox -MD -W3 -D_CRT_SECURE_NO_WARNINGS
 LDFLAGS      =
 !endif
 
@@ -48,9 +56,9 @@ DEFDEPS      = $(BASEDEF)
 !ifdef WIDE
 WIDEOPT      = -DPDC_WIDE
 DEFDEPS      = $(DEFDEPS) $(WIDEDEF)
-DEFFILE      = pdcursew.def
+DEFFILE      = $(OUTDIR)\pdcursew.def
 !else
-DEFFILE      = pdcurses.def
+DEFFILE      = $(OUTDIR)\pdcurses.def
 !endif
 
 !ifdef UTF8
@@ -65,51 +73,50 @@ CHTYPE_FLAGS= -DCHTYPE_32
 CHTYPE_FLAGS= -DCHTYPE_16
 !endif
 
-SHL_LD = link $(LDFLAGS) /NOLOGO /DLL /OUT:pdcurses.dll /DEF:$(DEFFILE)
-
 CCLIBS      = user32.lib gdi32.lib advapi32.lib shell32.lib comdlg32.lib
 # may need to add msvcrt.lib for VC 2.x, VC 5.0 doesn't want it
 #CCLIBS      = msvcrt.lib user32.lib gdi32.lib advapi32.lib comdlg32.lib
 
 LIBEXE      = lib -nologo
 
-LIBCURSES   = pdcurses.lib
-CURSESDLL   = pdcurses.dll
+LIBCURSES   = $(OUTDIR)\pdcurses.lib
+CURSESDLL   = $(OUTDIR)\pdcurses.dll
 
 !ifdef DLL
 DLLOPT      = -DPDC_DLL_BUILD
-PDCLIBS      = $(CURSESDLL)
+PDCLIBS     = $(CURSESDLL)
 !else
-PDCLIBS      = $(LIBCURSES)
+PDCLIBS     = $(LIBCURSES)
 !endif
 
-BUILD      = $(CC) -I$(PDCURSES_SRCDIR) -c $(CFLAGS) $(CHTYPE_FLAGS) $(DLLOPT) \
+SHL_LD 		= link $(LDFLAGS) /NOLOGO /DLL /OUT:$(CURSESDLL) /DEF:$(DEFFILE)
+
+BUILD      	= $(CC) -Fo$(OBJDIR)\ -I$(PDCURSES_SRCDIR) -c $(CFLAGS) $(CHTYPE_FLAGS) $(DLLOPT) \
 $(WIDEOPT) $(UTF8OPT)
 
-all:   $(PDCLIBS) $(DEMOS)
-
+all: $(PDCLIBS) $(DEMOS)
 clean:
-   -del *.obj
-   -del *.lib
-   -del *.exe
-   -del *.dll
-   -del *.exp
-   -del *.res
-   -del *.def
+   -rmdir /s /q $(OUTDIR)
+   -rmdir /s /q $(OBJDIR)
 
-DEMOOBJS = $(DEMOS:.exe=.obj) tui.obj
-
-$(LIBOBJS) $(PDCOBJS) : $(PDCURSES_HEADERS)
+$(LIBOBJS) $(PDCOBJS) : $(PDCURSES_HEADERS) $(OUTDIR) $(OBJDIR) 
 $(PDCOBJS) : $(PDCURSES_WIN_H)
 $(DEMOOBJS) : $(PDCURSES_CURSES_H)
 $(DEMOS) : $(LIBCURSES)
 panel.obj : $(PANEL_HEADER)
 terminfo.obj: $(TERM_HEADER)
 
+
+$(OUTDIR) : 
+	@IF NOT EXIST $(OUTDIR) ( mkdir $(OUTDIR) )
+
+$(OBJDIR) :
+	@IF NOT EXIST $(OBJDIR) ( mkdir $(OBJDIR) )
+
 !ifndef DLL
 $(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
-   $(LIBEXE) -out:$@ $(LIBOBJS) $(PDCOBJS)
-   -copy $(LIBCURSES) panel.lib
+	$(LIBEXE) /OUT:$@ $(LIBOBJS) $(PDCOBJS)
+	-copy $(LIBCURSES) $(OUTDIR)\panel.lib
 !endif
 
 $(DEFFILE) : $(DEFDEPS)
@@ -120,38 +127,41 @@ $(DEFFILE) : $(DEFDEPS)
    type $(WIDEDEF) >> $(DEFFILE)
 !endif
 
-$(CURSESDLL) : $(LIBOBJS) $(PDCOBJS) $(DEFFILE) pdcurses.obj
-   $(SHL_LD) $(LIBOBJS) $(PDCOBJS) pdcurses.obj $(CCLIBS)
-   -copy $(LIBCURSES) panel.lib
+$(CURSESDLL) : $(LIBOBJS) $(PDCOBJS) $(DEFFILE) $(OBJDIR)\pdcurses.obj
+   $(SHL_LD) $(LIBOBJS) $(PDCOBJS) $(OBJDIR)\pdcurses.obj $(CCLIBS)
+   -copy $(LIBCURSES) $(OUTDIR)\panel.lib
 
-pdcurses.res pdcurses.obj: $(osdir)\pdcurses.rc $(osdir)\pdcurses.ico
+pdcurses.res $(OBJDIR)\pdcurses.obj: $(osdir)\pdcurses.rc $(osdir)\pdcurses.ico
    rc /r /fopdcurses.res $(osdir)\pdcurses.rc
 !ifdef IX86
-   cvtres /MACHINE:IX86 /NOLOGO /OUT:pdcurses.obj pdcurses.res
+   cvtres /MACHINE:IX86 /NOLOGO /OUT:$(OBJDIR)\pdcurses.obj pdcurses.res
 !else
-   cvtres /MACHINE:X64 /NOLOGO /OUT:pdcurses.obj pdcurses.res
+   cvtres /MACHINE:X64 /NOLOGO /OUT:$(OBJDIR)\pdcurses.obj pdcurses.res
 !endif
 
-{$(srcdir)\}.c{}.obj::
-   $(BUILD) $<
+{$(srcdir)\}.c{$(OBJDIR)\}.obj::
+	$(BUILD) $<
 
-{$(osdir)\}.c{}.obj::
-   $(BUILD) $<
+{$(osdir)\}.c{$(OBJDIR)\}.obj::	
+	$(BUILD) $<
 
-{$(demodir)\}.c{}.obj::
-   $(BUILD) $<
+{$(demodir)\}.c{$(OBJDIR)\}.obj::
+	$(BUILD) $<
 
-.obj.exe:
-   $(LINK) $(LDFLAGS) $< $(LIBCURSES) $(CCLIBS)
+{$(OBJDIR)\}.obj{$(OUTDIR)\}.exe:
+   	$(LINK) $(LDFLAGS) /OUT:$(OUTDIR)\$(@F) $< $(LIBCURSES) $(CCLIBS)
 
-tuidemo.exe: tuidemo.obj tui.obj
-   $(LINK) $(LDFLAGS) $*.obj tui.obj $(LIBCURSES) $(CCLIBS)
+$(OUTDIR)\tuidemo.exe: $(OBJDIR)\tuidemo.obj $(OBJDIR)\tui.obj
+	@echo tuidemo
+	$(LINK) $(LDFLAGS) /OUT:$*.exe $** $(CCLIBS)
 
-tui.obj: $(demodir)\tui.c $(demodir)\tui.h
-   $(BUILD) -I$(demodir) $(demodir)\tui.c
+$(OBJDIR)\tui.obj: $(demodir)\tui.c $(demodir)\tui.h
+	@echo tui.obj
+	$(BUILD) -I$(demodir) $(demodir)\tui.c
 
-tuidemo.obj: $(demodir)\tuidemo.c
-   $(BUILD) -I$(demodir) $(demodir)\tuidemo.c
+$(OBJDIR)\tuidemo.obj: $(demodir)\tuidemo.c
+	@echo tuidemo.obj
+	$(BUILD) -I$(demodir) $(demodir)\tuidemo.c
 
 PLATFORM1 = Visual C++
 PLATFORM2 = Microsoft Visual C/C++ for Win32
