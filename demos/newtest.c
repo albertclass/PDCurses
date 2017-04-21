@@ -406,7 +406,7 @@ int main( int argc, char **argv)
                    L'b', 0x30a, L'i', L'n', L'i', 0x304, L'n', 0x30b, 0x329,
                    L'g', 0x310,
                    L' ', L'C', 0x338, L'h', 0x306,  L'a', 0x361, L'r', L's',
-                   0x30e, 0x348, 0 };
+                   0x30e, 0x348, 0 }; //'
 
                 static const wchar_t *texts[6] = { spanish, russian, greek,
                                 georgian, fullwidth, combining_marks};

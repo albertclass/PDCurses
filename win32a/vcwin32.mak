@@ -42,7 +42,7 @@ LINK    = link.exe -nologo
 
 !ifdef DEBUG
 CFLAGS       = -Zi -DPDCDEBUG -MDd -D_CRT_SECURE_NO_WARNINGS
-LDFLAGS      = -debug -pdb:none
+LDFLAGS      = -debug -pdb:$(OUTDIR)\pdcurses.pdb
 !else
 CFLAGS       = -Ox -MD -W3 -D_CRT_SECURE_NO_WARNINGS
 LDFLAGS      =
@@ -116,7 +116,6 @@ $(OBJDIR) :
 !ifndef DLL
 $(LIBCURSES) : $(LIBOBJS) $(PDCOBJS)
 	$(LIBEXE) /OUT:$@ $(LIBOBJS) $(PDCOBJS)
-	-copy $(LIBCURSES) $(OUTDIR)\panel.lib
 !endif
 
 $(DEFFILE) : $(DEFDEPS)
@@ -129,7 +128,6 @@ $(DEFFILE) : $(DEFDEPS)
 
 $(CURSESDLL) : $(LIBOBJS) $(PDCOBJS) $(DEFFILE) $(OBJDIR)\pdcurses.obj
    $(SHL_LD) $(LIBOBJS) $(PDCOBJS) $(OBJDIR)\pdcurses.obj $(CCLIBS)
-   -copy $(LIBCURSES) $(OUTDIR)\panel.lib
 
 pdcurses.res $(OBJDIR)\pdcurses.obj: $(osdir)\pdcurses.rc $(osdir)\pdcurses.ico
    rc /r /fopdcurses.res $(osdir)\pdcurses.rc
